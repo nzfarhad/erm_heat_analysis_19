@@ -464,7 +464,7 @@ results$rcsi_low <- rcsi_severity_perc[["no_or_low_coping"]] * 100
 
 
 # output
-write.csv(results, "output/HEAT_datamerge_August_2019.csv", row.names = F)
+write.csv(results, "output/HEAT_datamerge_June_2019.csv", row.names = F)
 
 
 ### end
