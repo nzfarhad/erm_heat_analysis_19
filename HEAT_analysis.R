@@ -20,7 +20,7 @@ row_sum <- function(data, vars) {
 }
 
 # load data
-df <- read_excel("input/data/HEAT-master-June July Agust-20102019.xlsx") %>%
+df <- read_excel("input/data/HEAT_master_June_July_Agust_21102019.xlsx") %>%
   type.convert()
 names(df) <- rename1(df)
 
