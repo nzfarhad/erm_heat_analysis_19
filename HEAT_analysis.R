@@ -20,13 +20,19 @@ row_sum <- function(data, vars) {
 }
 
 # load data
-df <- read_excel("input/data/HEAT_master_June_July_Agust_21102019.xlsx") %>%
+df <- read_excel("input/data/up_to_oct/heat_master_oct_data_included_11132019.xlsx") %>%
   type.convert()
 names(df) <- rename1(df)
 
+# load WASH DACAAR data
+df_wash <- read_excel("input/data/up_to_oct/heat_dacaar_consolidated_data_october.xlsx") %>%
+  type.convert()
+names(df_wash) <- rename1(df_wash)
+
+
 # filter data for a particular month
 df <- df %>%
-  filter(Month == "June")
+  filter(Month == "October")
 
 
 # create data frame for results
@@ -35,6 +41,7 @@ results <- data.frame(row.names = 1)
 
 # total households
 results$num_hh <- nrow(df)
+results$num_wash_hh <- nrow(df_wash)
 
 # total population vars
 population_all_vars <- c(
@@ -99,6 +106,8 @@ df$vulnerability.child_hhh[is.na(df$vulnerability.child_hhh)] <- 0
 results$p_child_hh_head <- (sum(df$vulnerability.child_hhh, na.rm = T) / results$num_hh) * 100
 results$p_nchild_hh_head <- 100 - results$p_child_hh_head
 
+results$num_child_hoh <- sum(df$vulnerability.child_hhh, na.rm = T)
+
 # hh with at least one disabled member
 df$vulnerability.disable[is.na(df$vulnerability.disable)] <- 0
 results$p_hh_1dbility <- (sum(df$vulnerability.disable, na.rm = T) / results$num_hh) * 100
@@ -108,6 +117,15 @@ results$p_hh_n1dbility <- 100 - results$p_hh_1dbility
 df$vulnerability.chro_ill[is.na(df$vulnerability.chro_ill)] <- 0
 results$p_hh_1ill <- (sum(df$vulnerability.chro_ill, na.rm = T) / results$num_hh) * 100
 results$p_hh_n1ill <- 100 - results$p_hh_1ill
+
+# number of provinces
+df_provinces <- as.character(df$Province)
+df_wash_provinces <- as.character(df_wash$Province)
+
+total_provinces <- c(df_provinces, df_wash_provinces)
+unique_provinces <- unique(total_provinces)
+results$num_prov <- length(unique_provinces) -2
+
 
 # displacement
 # Households reporting being displaced:
@@ -131,7 +149,7 @@ income_source_table <- table(df$S4_financial_ASSESS.main_income)
 income_source_table_prop <- (prop.table(income_source_table))
 results$p_in_none <- income_source_table_prop[["jobless"]] * 100
 results$p_in_unskil <- income_source_table_prop[["unskill_lab"]] * 100
-results$p_in_agri <- income_source_table_prop[["farmer"]] * 100
+results$p_in_agri <- income_source_table_prop[["agriculture"]] * 100
 results$p_in_skil <- income_source_table_prop[["skill_lab"]] * 100
 results$p_in_other <- income_source_table_prop[["other"]] * 100
 
@@ -288,53 +306,74 @@ results$avg_mkt_dist <- mean(df$mark_dist_km, na.rm = T)
 # Reported distance to closest functioning market: Average time to closest market in minutes:
 results$avg_mkt_time <- mean(df$mark_dist_min, na.rm = T)
 
+
+############ WASH ################
+
+# lower case 
+
+df_wash$S6_wash.q6_1_drinking_water <- tolower(df_wash$S6_wash.q6_1_drinking_water)
+df_wash$S6_wash.q6_1_bathing_water <- tolower(df_wash$S6_wash.q6_1_bathing_water)
+df_wash$S6_wash.q6_1_cooking_water <- tolower(df_wash$S6_wash.q6_1_cooking_water)
+df_wash$S6_wash.q6_2_main_source_water <- tolower(df_wash$S6_wash.q6_2_main_source_water)
+df_wash$S6_wash.q6_4_stable_water <- tolower(df_wash$S6_wash.q6_4_stable_water)
+df_wash$S6_wash.q6_6_latrine_available <- tolower(df_wash$S6_wash.q6_6_latrine_available)
+df_wash$S6_wash.q6_7_latrine_type <- tolower(df_wash$S6_wash.q6_7_latrine_type)
+
 # Households reporting not having access to enough water at the time of the assessment: Not enough drinking water
-drinking_water_perc <- prop.table(table(df$S6_wash.drinking))
-results$p_wat_drk <- drinking_water_perc[["0"]] * 100 
-results$p_nwat_drk <- drinking_water_perc[["1"]] * 100
+drinking_water_perc <- prop.table(table(df_wash$S6_wash.q6_1_drinking_water))
+results$p_wat_drk <- drinking_water_perc[["no"]] * 100 
+results$p_nwat_drk <- drinking_water_perc[["yes"]] * 100
+
 
 # Households reporting not having access to enough water at the time of the assessment: Not enough bathing water
-bathing_water_perc <- prop.table(table(df$S6_wash.bathing))
-results$p_wat_bath <- bathing_water_perc[["0"]] * 100
-results$p_nwat_bath <- bathing_water_perc[["1"]] * 100
+bathing_water_perc <- prop.table(table(df_wash$S6_wash.q6_1_bathing_water))
+results$p_wat_bath <- bathing_water_perc[["no"]] * 100
+results$p_nwat_bath <- bathing_water_perc[["yes"]] * 100
+
 
 # Households reporting not having access to enough water at the time of the assessment: Not enough cooking water
-cooking_water_perc <- prop.table(table(df$S6_wash.cooking))
-results$p_wat_cook <- cooking_water_perc[["0"]] * 100
-results$p_nwat_cook <- cooking_water_perc[["1"]] * 100
+cooking_water_perc <- prop.table(table(df_wash$S6_wash.q6_1_cooking_water))
+results$p_wat_cook <- cooking_water_perc[["no"]] * 100
+results$p_nwat_cook <- cooking_water_perc[["yes"]] * 100
+
 
 # Types of latrine available at the time of the assessment as reported by households:
-df$S6_wash.lat_type <- as.character(df$S6_wash.lat_type)
+# df_wash$S6_wash.q6_7_latrine_type <- as.character(df_wash$S6_wash.q6_7_latrine_type)
 
-df <- df %>%
+df_wash <- df_wash %>%
   mutate(
     S6_wash.lat_type_2 = case_when(
-      is.na(S6_wash.lat_type) & S6_wash.lat_avail == 1 ~ "unknown",
-      S6_wash.lat_type == "family_lat" ~ "family_lat",
-      S6_wash.lat_type == "comm_lat" ~ "comm_lat",
-      S6_wash.lat_type == "family_vip" ~ "family_vip",
-      S6_wash.lat_type == "open_Def" | S6_wash.lat_avail == 0 ~ "open_Def"
-      
+      S6_wash.q6_7_latrine_type == "family_lat" ~ "family_lat",
+      S6_wash.q6_7_latrine_type == "family_pit" ~ "family_lat",
+      S6_wash.q6_7_latrine_type == "comm_lat" ~ "comm_lat",
+      S6_wash.q6_7_latrine_type == "family_vip" ~ "family_vip",
+      S6_wash.q6_7_latrine_type == "flush_lat" ~ "flush_lat",
+      S6_wash.q6_7_latrine_type == "open_def" | S6_wash.q6_6_latrine_available == "no" ~ "open_Def",
+      TRUE ~ NA_character_
     )
   )
 
-latrine_type <- prop.table(table(df$S6_wash.lat_type_2))
+
+latrine_type <- prop.table(table(df_wash$S6_wash.lat_type_2))
 
 results$p_lat_fam <- latrine_type[["family_lat"]] * 100
 results$p_lat_no <- latrine_type[["open_Def"]] * 100
 results$p_lat_com <- latrine_type[["comm_lat"]] * 100
 results$p_lat_vip <- latrine_type[["family_vip"]] * 100
+results$p_lat_flash <- latrine_type[["flush_lat"]] * 100
 results$p_lat_ukwn <- latrine_type[["unknown"]] * 100
 
+
 # Stable water source: Households reporting access to a stable water source:
-stable_water <- prop.table(table(df$S6_wash.wat_stable))
-results$p_swat_yes <- stable_water[["1"]] * 100
+stable_water <- prop.table(table(df_wash$S6_wash.q6_4_stable_water))
+results$p_swat_yes <- stable_water[["yes"]] * 100
 
 # Stable water source: Average distance to their main stable water source:
-results$avg_swat_dist <- mean(df$S6_wash.wat_km, na.rm = T)
+results$avg_swat_dist <- mean(df_wash$S6_wash.q6_3_1bytransport, na.rm = T)
 
 # Stable water source: Average time to their main stable water source:
-results$avg_swat_time <- mean(df$S6_wash.wat_min, na.rm = T)
+results$avg_swat_time <- mean(df_wash$S6_wash.q6_3_1byfoot, na.rm = T)
+
 
 
 # Households self reported needs by level of priority: 
@@ -464,9 +503,11 @@ results$rcsi_low <- rcsi_severity_perc[["no_or_low_coping"]] * 100
 
 
 # output
-write.csv(results, "output/HEAT_datamerge_June_2019.csv", row.names = F)
+write.csv(results, "output/oct_19/HEAT_datamerge_Oct_2019.csv", row.names = F)
 
 
 ### end
   
-  
+
+
+
